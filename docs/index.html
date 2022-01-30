@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mos9527's WASM cipherer Demo!</title>
+    <script src="cipher.js"></script>
+    <script type="module">
+        cipher().then(Module => {
+            window.encrypt = (string, pass, iv) => Module.ccall('encrypt', "string", ["string", "string", "string"], [string, pass, iv])        
+            window.decrypt = (string, pass, iv) => Module.ccall('decrypt', "string", ["string", "string", "string"], [string, pass, iv])        
+        })    
+    </script>
+    <style>
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>mos9527's WASM Cipherer</h1>
+    My first WASM project!
+    <hr>
+    <h3>Features:</h3>
+    <ul>        
+        <li>CRC32 Error checking</li>
+        <li>ECB & CBC Modes of stream operation</li>
+        <li>Multiple obfuscation boxes (128-bits)</li>
+      </ul>
+    <i>...ngl it's pretty bad ;(</i>
+    <hr>
+    <form>
+        <label for="cipher">Plaintext / Ciphertext:</label><br>
+        <input type="text" id="input" value="Hello,WASM!"><br>
+        <label for="pass">Password:</label><br>
+        <input type="text" id="pass"><br>
+        <label for="iv">IV (Initialization Vector):</label><br>
+        <input type="text" id="iv"><br>
+        <label>Output:</label><br>
+        <code><div id="output"></div></code>
+    </form>    
+    
+    <hr>
+    <button onclick="
+        try {
+            document.getElementById('output').innerText = window.encrypt(
+            document.getElementById('input').value,
+            document.getElementById('pass').value,
+            document.getElementById('iv').value)
+            document.getElementById('output').className = 'success'
+        } catch (error) {
+            document.getElementById('output').innerText = error
+            document.getElementById('output').className = 'Encryption failed.'
+        }        
+    " >Encrypt</button> <button onclick="
+        try {
+            document.getElementById('output').innerText = window.decrypt(
+            document.getElementById('input').value,
+            document.getElementById('pass').value,
+            document.getElementById('iv').value)
+            document.getElementById('output').className = 'success'
+        } catch (error) {
+            document.getElementById('output').innerText = 'Decryption failed.'
+            document.getElementById('output').className = 'error'
+        }            
+    ">Decrypt</button>
+</body>
+</html>
