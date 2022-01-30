@@ -12,11 +12,7 @@
             window.decrypt = (string, pass, iv) => Module.ccall('decrypt', "string", ["string", "string", "string"], [string, pass, iv])        
         })    
     </script>
-    <style>
-        .error {
-            color: red;
-        }
-    </style>
+    <style> .error {color: red;} body {color: #222;background: #fff;}@media (prefers-color-scheme: dark) {body {color: #eee;background: #121212;}} </style>
 </head>
 <body>
     <h1>mos9527's WASM Cipherer</h1>
@@ -31,13 +27,13 @@
     <i>...ngl it's pretty bad ;(</i>
     <hr>
     <form>
-        <label for="cipher">Plaintext / Ciphertext:</label><br>
-        <input type="text" id="input" value="Hello,WASM!"><br>
-        <label for="pass">Password:</label><br>
+        <label for="cipher">密文（或明文）内容:</label><br>
+        <input type="text" id="input"><br>
+        <label for="pass">密钥:</label><br>
         <input type="text" id="pass"><br>
-        <label for="iv">IV (Initialization Vector):</label><br>
+        <label for="iv">IV (CBC 初始化向量，可选):</label><br>
         <input type="text" id="iv"><br>
-        <label>Output:</label><br>
+        <label>输出:</label><br>
         <code><div id="output"></div></code>
     </form>    
     
@@ -53,7 +49,7 @@
             document.getElementById('output').innerText = error
             document.getElementById('output').className = 'Encryption failed.'
         }        
-    " >Encrypt</button> <button onclick="
+    " >加密</button> <button onclick="
         try {
             document.getElementById('output').innerText = window.decrypt(
             document.getElementById('input').value,
@@ -64,6 +60,6 @@
             document.getElementById('output').innerText = 'Decryption failed.'
             document.getElementById('output').className = 'error'
         }            
-    ">Decrypt</button>
+    ">解密</button>
 </body>
 </html>
