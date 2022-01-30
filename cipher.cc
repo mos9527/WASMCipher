@@ -134,7 +134,7 @@ void unpad(ustring &str){
 	// Verify checksum
 	unsigned long r_crc = crc32(str);	
 	if (r_crc != crc)
-		throw std::runtime_error("Decryption failed.");
+		throw std::runtime_error("Decryption failed. Check KEY / IV.");
 }
 std::string encrypt_ecb(ustring &str, uchar *pass)
 {
@@ -197,5 +197,17 @@ extern "C"
 		TRUNC(pass_,pass);TRUNC(iv_,iv);
 		ustring cipher = decrypt_cbc(str,pass_,iv_);
 		return strdup((char*)cipher.c_str()); // same goes here
+	}
+	int main(int argc,char* argv[]){
+		if (argc == 5){
+			std::string mode = argv[1];
+			std::string result;
+			if (mode.compare("encrypt") == 0) result.append(encrypt(argv[2],argv[3],argv[4]));
+			else                              result.append(decrypt(argv[2],argv[3],argv[4]));
+			std::cout << result << '\n';
+		} else {
+			std::cout << "usage : encrypt/decrypt TEXT PASSWORD IV\n";
+		}
+		return 0;
 	}
 }
