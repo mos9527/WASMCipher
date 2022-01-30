@@ -1,2 +1,3 @@
-cipher
 .vscode
+test_*
+__pycache__
