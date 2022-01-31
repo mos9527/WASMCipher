@@ -82,28 +82,28 @@ ustring base64_decode(std::string &in){
 	}
 	return out;
 }
-void encypher(uchar *block, int offset, uchar *pass){
+void encypher(uchar *block, int offset,ustring &pass){
 	// S-S-X-S-S-X-S
 	for (int i = 0; i < 15; i++)
 	{		
 		block[i] = sbox[block[i]];
 		block[i] = sbox[block[i]];
-		block[i] ^= pass[(offset + i) % 16];
+		block[i] ^= pass[(offset + i) % pass.length()];
 		block[i] = sbox[block[i]];
 		block[i] = sbox[block[i]];
-		block[i] ^= pass[(offset + i) % 16];
+		block[i] ^= pass[(offset + i) % pass.length()];
 		block[i] = sbox[block[i]];
 	}
 }
-void decypher(uchar *block, int offset, uchar *pass){
+void decypher(uchar *block, int offset, ustring &pass){
 	// S-X-S-S-X-S-S
 	for (int i = 0; i < 15; i++)
 	{
 		block[i] = inv_sbox[block[i]];
-		block[i] ^= pass[(offset + i) % 16];
+		block[i] ^= pass[(offset + i) % pass.length()];
 		block[i] = inv_sbox[block[i]];
 		block[i] = inv_sbox[block[i]];
-		block[i] ^= pass[(offset + i) % 16];
+		block[i] ^= pass[(offset + i) % pass.length()];
 		block[i] = inv_sbox[block[i]];
 		block[i] = inv_sbox[block[i]];
 	}
@@ -136,14 +136,14 @@ void unpad(ustring &str){
 	if (r_crc != crc)
 		throw std::runtime_error("Decryption failed. Check KEY / IV.");
 }
-std::string encrypt_ecb(ustring &str, uchar *pass)
+std::string encrypt_ecb(ustring &str, ustring &pass)
 {
 	pad(str, padchar);
 	for (int i = 0; i + 16 <= str.length(); i += 16)
 		encypher(&str[i], i, pass);
 	return base64_encode(str);
 }
-ustring decrypt_ecb(std::string &str, uchar *pass)
+ustring decrypt_ecb(std::string &str, ustring &pass)
 {
 	ustring dec = base64_decode(str);
 	for (int i = 0; i + 16 <= dec.length(); i += 16)
@@ -151,7 +151,7 @@ ustring decrypt_ecb(std::string &str, uchar *pass)
 	unpad(dec);
 	return dec;
 }
-std::string encrypt_cbc(ustring &str, uchar *pass, uchar *iv)
+std::string encrypt_cbc(ustring &str, ustring &pass, uchar *iv)
 {
 	pad(str, padchar);
 	uchar vec[16];
@@ -164,7 +164,7 @@ std::string encrypt_cbc(ustring &str, uchar *pass, uchar *iv)
 	}
 	return base64_encode(str);
 }
-ustring decrypt_cbc(std::string &str, uchar *pass, uchar *iv)
+ustring decrypt_cbc(std::string &str, ustring &pass, uchar *iv)
 {
 	ustring dec = base64_decode(str);	
 	uchar vec[16], prev[16];
@@ -185,17 +185,17 @@ extern "C"
 #define TRUNC(a,b) memcpy(a,b,min(strlen(b),16));
 	char *encrypt(char *src,char *pass, char *iv){		
 		ustring str = (uchar *)src;		
-		uchar pass_[16]={0},iv_[16]={0};		
-		TRUNC(pass_,pass);TRUNC(iv_,iv);
-		std::string cipher = encrypt_cbc(str,pass_,iv_);	
+		ustring password = (uchar *)pass;
+		uchar iv_[16]={0}; TRUNC(iv_,iv);		
+		std::string cipher = encrypt_cbc(str,password,iv_);	
 		// Make a copy since string will be recycled shortly after
 		return strdup((char*)cipher.c_str());
 	}
 	char *decrypt(char *src,char *pass, char *iv){	
 		std::string str = src;
-		uchar pass_[16]={0},iv_[16]={0};
-		TRUNC(pass_,pass);TRUNC(iv_,iv);
-		ustring cipher = decrypt_cbc(str,pass_,iv_);
+		ustring password = (uchar *)pass;
+		uchar iv_[16]={0}; TRUNC(iv_,iv);
+		ustring cipher = decrypt_cbc(str,password,iv_);
 		return strdup((char*)cipher.c_str()); // same goes here
 	}
 	int main(int argc,char* argv[]){
