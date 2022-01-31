@@ -1,5 +1,5 @@
 CC=emcc
-OLEVEL=2
+OLEVEL=3
 NAME=cipher
 
 all: wasm py

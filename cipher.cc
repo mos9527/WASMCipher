@@ -128,13 +128,15 @@ void pad(ustring &str, uchar padding){
 void unpad(ustring &str){		
 	int r = (int)str.back() - 64; str.pop_back();
 	// Will pop last 4(checksum)+1(length) bytes,checksum is then valiadated	
+	if (r < 0 || r > str.length())
+		throw std::runtime_error("Obscure input");
 	unsigned long crc = 0;
 	for(int i=1;i<=4;i++) { crc |= str.back(); crc <<= i != 4 ? 8 : 0;str.pop_back();}		
 	while (r--) str.pop_back();
 	// Verify checksum
 	unsigned long r_crc = crc32(str);	
 	if (r_crc != crc)
-		throw std::runtime_error("Decryption failed. Check KEY / IV.");
+		throw std::runtime_error("Bad integrity");
 }
 std::string encrypt_ecb(ustring &str, ustring &pass)
 {
@@ -165,7 +167,7 @@ std::string encrypt_cbc(ustring &str, ustring &pass, uchar *iv)
 	return base64_encode(str);
 }
 ustring decrypt_cbc(std::string &str, ustring &pass, uchar *iv)
-{
+{	
 	ustring dec = base64_decode(str);	
 	uchar vec[16], prev[16];
 	memcpy(vec, iv, 16);
@@ -175,7 +177,7 @@ ustring decrypt_cbc(std::string &str, ustring &pass, uchar *iv)
 		XOR(&dec[i], &vec[0], 16);
 		decypher(&dec[i], i, pass);
 		memcpy(vec, prev, 16);
-	}
+	}	
 	unpad(dec);
 	return dec;
 }
@@ -186,6 +188,7 @@ extern "C"
 	char *encrypt(char *src,char *pass, char *iv){		
 		ustring str = (uchar *)src;		
 		ustring password = (uchar *)pass;
+		if (password.length() == 0) password.append(padchar,16);
 		uchar iv_[16]={0}; TRUNC(iv_,iv);		
 		std::string cipher = encrypt_cbc(str,password,iv_);	
 		// Make a copy since string will be recycled shortly after
@@ -193,15 +196,16 @@ extern "C"
 	}
 	char *decrypt(char *src,char *pass, char *iv){	
 		std::string str = src;
-		ustring password = (uchar *)pass;
-		uchar iv_[16]={0}; TRUNC(iv_,iv);
+		ustring password = (uchar *)pass;		
+		if (password.length() == 0) password.append(padchar,16);
+		uchar iv_[16]={0}; TRUNC(iv_,iv);		
 		ustring cipher = decrypt_cbc(str,password,iv_);
 		return strdup((char*)cipher.c_str()); // same goes here
 	}
 	int main(int argc,char* argv[]){
-		if (argc == 5){
+		if (argc == 5){			
 			std::string mode = argv[1];
-			std::string result;
+			std::string result;			
 			if (mode.compare("encrypt") == 0) result.append(encrypt(argv[2],argv[3],argv[4]));
 			else                              result.append(decrypt(argv[2],argv[3],argv[4]));
 			std::cout << result << '\n';
