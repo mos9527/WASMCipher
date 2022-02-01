@@ -12,7 +12,7 @@
             window.decrypt = (string, pass, iv , mode) => Module.ccall('decrypt', "string", ["string", "string", "string", "integer"], [string, pass, iv, mode])        
         })    
     </script>
-    <style> code {width: 100%; word-wrap:normal; background-color:#EEE;border-radius: 3px;} .error {color: red;} body {color: #222;background: #fff;}@media (prefers-color-scheme: dark) {body {color: #eee;background: #121212;}} </style>
+    <style> code {width: 100%; word-wrap:break-word;border-radius: 3px;} .error {color: red;} body {color: #222;background: #fff;}@media (prefers-color-scheme: dark) {body {color: #eee;background: #121212;}} </style>
 </head>
 <body>
     <h1>mos9527's WASM Cipherer</h1>
@@ -39,7 +39,7 @@
         <input type="radio" value="cbc" name="blockmode" checked="true"><label>CBC</label>
         <input type="radio" value="ecb" name="blockmode"><label>ECB</label> |
         <input type="radio" value="base64" name="codecmode" checked="true"><label>Base 64</label>
-        <input type="radio" value="base85" name="codecmode"><label>Base 85</label> |
+        <input type="radio" value="base85" name="codecmode"><label>Base 85</label><br>
         <input type="checkbox" name="fenced" checked="true"><label>栅栏密码</label>
         <br>        
         <code id="output">...awaiting input</code>
