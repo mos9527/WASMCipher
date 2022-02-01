@@ -55,7 +55,6 @@
         try {
             let data = new FormData(document.querySelector('form'));
             let mode = (data.get('codecmode') == 'base64' ? 0b100 : 0) | (data.get('blockmode') == 'cbc' ? 0b010 : 0) | (data.get('fenced') ? 0b001 : 0);
-            console.log(mode)
             document.getElementById('output').innerText = window.encrypt(
                 data.get('cipher'),data.get('pass'),data.get('iv'),mode
             )
