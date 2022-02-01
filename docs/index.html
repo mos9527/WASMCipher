@@ -8,11 +8,11 @@
     <script src="cipher.js"></script>
     <script type="module">
         cipher().then(Module => {
-            window.encrypt = (string, pass, iv) => Module.ccall('encrypt', "string", ["string", "string", "string"], [string, pass, iv])        
-            window.decrypt = (string, pass, iv) => Module.ccall('decrypt', "string", ["string", "string", "string"], [string, pass, iv])        
+            window.encrypt = (string, pass, iv , mode) => Module.ccall('encrypt', "string", ["string", "string", "string", "integer"], [string, pass, iv, mode])        
+            window.decrypt = (string, pass, iv , mode) => Module.ccall('decrypt', "string", ["string", "string", "string", "integer"], [string, pass, iv, mode])        
         })    
     </script>
-    <style> .error {color: red;} body {color: #222;background: #fff;}@media (prefers-color-scheme: dark) {body {color: #eee;background: #121212;}} </style>
+    <style> code {width: 100%; word-wrap: break-word; background-color:#EEE;border-radius: 3px;} .error {color: red;} body {color: #222;background: #fff;}@media (prefers-color-scheme: dark) {body {color: #eee;background: #121212;}} </style>
 </head>
 <body>
     <h1>mos9527's WASM Cipherer</h1>
@@ -22,28 +22,43 @@
     <ul>        
         <li>CRC32 Error checking</li>
         <li>ECB & CBC Modes of stream operation</li>
+        <li>Base 64 / 85 codec</li>
+        <li>Rail fence cipherer</li>
         <li>Multiple obfuscation boxes (128-bits)</li>
       </ul>
-    <i>...ngl it's pretty bad ;(</i>
+    <i>...Shannon would've killed me if he'd seen this</i>
     <hr>
     <form>
         <label for="cipher">密文（或明文）内容:</label><br>
-        <input type="text" id="input"><br>
+        <input type="text" name="cipher"><br>
         <label for="pass">密钥:</label><br>
-        <input type="text" id="pass"><br>
+        <input type="text" name="pass"><br>
         <label for="iv">IV (CBC 初始化向量，可选):</label><br>
-        <input type="text" id="iv" maxlength="16"><br>
-        <label>输出:</label><br>
-        <code><div id="output"></div></code>
+        <input type="text" name="iv" maxlength="16"><br>
+        <label>模式：</label>   
+        <input type="radio" value="cbc" name="blockmode" checked="true"><label>CBC</label>
+        <input type="radio" value="ecb" name="blockmode"><label>ECB</label> |
+        <input type="radio" value="base64" name="codecmode" checked="true"><label>Base 64</label>
+        <input type="radio" value="base85" name="codecmode"><label>Base 85</label> |
+        <input type="checkbox" name="fenced" checked="true"><label>栅栏密码</label>
+        <br>        
+        <code id="output">...awaiting input</code>
     </form>    
     
     <hr>
+    <!-- 
+        #define MODE_BASE85 0b100
+        #define MODE_CBC    0b010    
+        #define MODE_FENCE  0b001 
+    -->
     <button onclick="
         try {
+            let data = new FormData(document.querySelector('form'));
+            let mode = (data.get('codecmode') == 'base64' ? 0b100 : 0) | (data.get('blockmode') == 'cbc' ? 0b010 : 0) | (data.get('fenced') ? 0b001 : 0);
+            console.log(mode)
             document.getElementById('output').innerText = window.encrypt(
-            document.getElementById('input').value,
-            document.getElementById('pass').value,
-            document.getElementById('iv').value)
+                data.get('cipher'),data.get('pass'),data.get('iv'),mode
+            )
             document.getElementById('output').className = 'success'
         } catch (error) {
             document.getElementById('output').innerText = error
@@ -51,10 +66,11 @@
         }        
     " >加密</button> <button onclick="
         try {
+            let data = new FormData(document.querySelector('form'));
+            let mode = (data.get('codecmode') == 'base64' ? 0b100 : 0) | (data.get('blockmode') == 'cbc' ? 0b010 : 0) | (data.get('fenced') ? 0b001 : 0);
             document.getElementById('output').innerText = window.decrypt(
-            document.getElementById('input').value,
-            document.getElementById('pass').value,
-            document.getElementById('iv').value)
+                data.get('cipher'),data.get('pass'),data.get('iv'),mode
+            )
             document.getElementById('output').className = 'success'
         } catch (error) {
             document.getElementById('output').innerText = 'Decryption failed.'

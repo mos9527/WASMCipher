@@ -47,7 +47,7 @@ if len(sys.argv) == 2:
     for a in range(0,16):        
         print(end='    ')
         for b in range(0,16):
-            print('0x'+hex(crc.table[a + b * 8])[2:].rjust(crc.size // 4,'0'),end=',')
+            print('0x'+hex(crc.table[a * 8 + b])[2:].rjust(crc.size // 4,'0'),end=',')
         print(' ')
     print('}')
     print('** Test with data 0x01020304:',hex(crc.calc(b'\x01\x02\x03\x04')))
