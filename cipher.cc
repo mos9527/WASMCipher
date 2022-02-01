@@ -493,7 +493,7 @@ extern "C"
 		}        
         std::cout << "usage : [encrypt/decrypt] [MODE] [TEXT] [PASSWORD] [IV]" << std::endl;
         std::cout << "        MODE : integer. masks availbale:" << std::endl;
-        std::cout << "               -Base 85 or 64  0b1--" << std::endl;
+        std::cout << "               -Base 64 or 85  0b1--" << std::endl;
         std::cout << "               -CBC or ECB     0b-1-" << std::endl;
         std::cout << "    (period=4) -Fenced or not  0b--1" << std::endl;
         std::cout << "        TEXT : string. Ciphertext or Plaintext." << std::endl;
