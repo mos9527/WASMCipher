@@ -61,8 +61,8 @@
             )
             document.getElementById('output').className = 'success'
         } catch (error) {
-            document.getElementById('output').innerText = error
-            document.getElementById('output').className = 'Encryption failed.'
+            document.getElementById('output').innerText = `Encryption failed:${error}`
+            document.getElementById('output').className = 'error'
         }        
     " >加密</button> <button onclick="
         try {
@@ -73,7 +73,7 @@
             )
             document.getElementById('output').className = 'success'
         } catch (error) {
-            document.getElementById('output').innerText = 'Decryption failed.'
+            document.getElementById('output').innerText = `Decryption failed:${error}`
             document.getElementById('output').className = 'error'
         }            
     ">解密</button>
