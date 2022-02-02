@@ -1,9 +1,9 @@
 from distutils.core import setup, Extension
 
-module1 = Extension('cipher',
-                    sources = ['cipher.cpp'])
+exts = Extension('cipher',sources = ['cipher.cpp'], define_macros=[('PYTHON','')],)
 
-setup (name = 'cipher',
+setup (name = 'pycipher',
        version = '1.0',
-       description = 'This is a demo package for cipher.cc',
-       ext_modules = [module1])
+       description = 'WASMCipher native Python bindings',
+       ext_modules = [exts],
+       options={'build':{'build_lib':'./pycipher'}})

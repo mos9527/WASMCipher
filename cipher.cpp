@@ -232,7 +232,7 @@ class B64codec : public Codec
          * @return ustring 
          */
         uvector decode(std::string &in_){
-            std::string in = defence(in,fence_period);
+            std::string in = defence(in_,fence_period);
             uvector out;            
             int val = 0, valb = -8;
             for (char c : in)
@@ -452,7 +452,7 @@ extern "C"
             BlockCipher cipher = BlockCipher(codec,CRC32D,'/');\
             uchar iv_[16]={0}; std::memcpy(iv_,iv,MIN(strlen(iv),16));\
             uvector password = uvector(pass,pass + strlen(pass));    
-	char *encrypt(char *src,char *pass, char *iv, int mode){		                
+	char *encrypt(const char *src,const char *pass,const char *iv,int mode){		                
         READY;                
         uvector str = uvector(src,src+strlen(src) + 1); std::string text;
         if (password.size() == 0) password.insert(password.begin(),1,'\0');
@@ -462,7 +462,7 @@ extern "C"
             text = cipher.encryptECB(str,password);			               
         return strdup(text.c_str());
 	}
-	char *decrypt(char *src,char *pass, char *iv,int mode){	
+	char *decrypt(const char *src,const char *pass,const char *iv,int mode){	
         READY;       
         std::string str = src; uvector text;
         if (str.length() == 0)
@@ -474,60 +474,97 @@ extern "C"
             text = cipher.decryptECB(str,password);	                
 		return strdup((char*)&text[0]);
 	}
-#ifdef PYTHON
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-static PyObject *cipher_encrypt(PyObject *self, PyObject *args)
-{
-    char *src,*pass,*iv;
-    int mode;    
-    if (!PyArg_ParseTuple(args, "sssi", &src,&pass,&iv,&mode))
-        return NULL;
-    char *result = encrypt(src,pass,iv,mode);
-    return PyUnicode_FromString(result);
-}
-static PyMethodDef PyMethods[] = {
-    {"encrypt",  cipher_encrypt, METH_VARARGS,
-     "Encryption method."},    
-    {NULL, NULL, 0, NULL}        /* Sentinel */
-};
-static struct PyModuleDef PyModule = {
-    PyModuleDef_HEAD_INIT,
-    "cipher",   /* name of module */
-    NULL, /* module documentation, may be NULL */
-    -1,      /* size of per-interpreter state of the module,
-                 or -1 if the module keeps state in global variables. */
-    PyMethods
-};
-PyMODINIT_FUNC PyInit_cipher(void)
-{
-    return PyModule_Create(&PyModule);
-}
-#endif
 
-#ifdef CLI
-	int main(int argc,char* argv[]){	
-        if (argc > 4){
-            char * iv; if (argc == 6) iv = argv[5]; else iv = new char[16]();            
-            std::string op = argv[1]; char *result;     
-            int mode = std::atoi(argv[2]);
-            if (op.compare("encrypt") == 0){
-                result = encrypt(argv[3],argv[4],iv,mode);                
-            }else if (op.compare("decrypt") == 0){
-                result = decrypt(argv[3],argv[4],iv,mode);            
-            }            
-            std::cout << result << std::endl;
-            return 0;  
-		}        
-        std::cout << "usage : [encrypt/decrypt] [MODE] [TEXT] [PASSWORD] [IV]" << std::endl;
-        std::cout << "        MODE : integer. masks availbale:" << std::endl;
-        std::cout << "               -Base 64 or 85  0b1--" << std::endl;
-        std::cout << "               -CBC or ECB     0b-1-" << std::endl;
-        std::cout << "    (period=4) -Fenced or not  0b--1" << std::endl;
-        std::cout << "        TEXT : string. Ciphertext or Plaintext." << std::endl;
-        std::cout << "    PASSWORD : string. Can leave empty and then 16 *padchar* will be used." << std::endl;
-        std::cout << "          IV : truncates at 16 chars at pads with 0s otherwise,can leave empty." << std::endl;        
-		return 1;        
-	}
-#endif
-};
+    #ifdef PYTHON
+    #define PY_SSIZE_T_CLEAN
+    #include <Python.h>
+    static PyObject *CipherException;
+    static PyObject *cipher_encrypt(PyObject *self, PyObject *args)
+    {
+        const char *src,*pass,*iv;
+        int mode;    
+        if (!PyArg_ParseTuple(args, "sssi", &src,&pass,&iv,&mode))
+            return NULL;
+        try{
+            char *result = encrypt(src,pass,iv,mode);
+            return PyUnicode_FromString(result);
+        } catch (const std::runtime_error &e){          
+            PyErr_SetString(CipherException, e.what());
+            return NULL;
+        }    
+    }
+    static PyObject *cipher_decrypt(PyObject *self, PyObject *args)
+    {
+        const char *src,*pass,*iv;
+        int mode;    
+        if (!PyArg_ParseTuple(args, "sssi", &src,&pass,&iv,&mode))
+            return NULL;
+        try{
+            char *result = decrypt(src,pass,iv,mode);
+            return PyUnicode_FromString(result);
+        } catch (const std::runtime_error &e){  
+            PyErr_SetString(CipherException, e.what());
+            return NULL;
+        }    
+    }
+    static PyMethodDef PyMethods[] = {
+        {"encrypt",  cipher_encrypt, METH_VARARGS, "Encryption method."},    
+        {"decrypt",  cipher_decrypt, METH_VARARGS, "Decryption method."},        
+        {NULL, NULL, 0, NULL}        /* Sentinel */
+    };
+    static struct PyModuleDef PyModule = {
+        PyModuleDef_HEAD_INIT,
+        "cipher",   /* name of module */
+        NULL, /* module documentation, may be NULL */
+        -1,   /* size of per-interpreter state of the module,
+                or -1 if the module keeps state in global variables. */
+        PyMethods
+    };
+    PyMODINIT_FUNC PyInit_cipher(void)
+    {
+        PyObject *m = PyModule_Create(&PyModule);
+        if (m == NULL) return NULL;
+        CipherException  = PyErr_NewException("cipher.CipherException", NULL, NULL);
+        Py_XINCREF(CipherException);
+        if (PyModule_AddObject(m, "CipherException", CipherException) < 0) {
+            // failed to add exception, cleaning up
+            Py_XDECREF(CipherException);
+            Py_CLEAR(CipherException);
+            Py_DECREF(m);
+            return NULL;
+        }    
+        return m;
+    }
+    #endif
+
+    #ifdef CLI
+        int main(int argc,char* argv[]){	
+            if (argc > 4){
+                char * iv; if (argc == 6) iv = argv[5]; else iv = new char[16]();            
+                std::string op = argv[1]; char *result;     
+                int mode = std::atoi(argv[2]);
+                try{
+                    if (op.compare("encrypt") == 0){
+                        result = encrypt(argv[3],argv[4],iv,mode);                
+                    }else if (op.compare("decrypt") == 0){
+                        result = decrypt(argv[3],argv[4],iv,mode);            
+                    }            
+                    std::cout << result << std::endl;
+                    return 0;  
+                }catch (const std::runtime_error &e){  
+                    std::cout << e.what() << std::endl;
+                }
+                
+            }        
+            std::cout << "usage : [encrypt/decrypt] [MODE] [TEXT] [PASSWORD] [IV]" << std::endl;
+            std::cout << "        MODE : integer. masks availbale:" << std::endl;
+            std::cout << "               -Base 64 or 85  0b1--" << std::endl;
+            std::cout << "               -CBC or ECB     0b-1-" << std::endl;
+            std::cout << "    (period=4) -Fenced or not  0b--1" << std::endl;
+            std::cout << "        TEXT : string. Ciphertext or Plaintext." << std::endl;
+            std::cout << "    PASSWORD : string. Can leave empty and then 16 *padchar* will be used." << std::endl;
+            std::cout << "          IV : truncates at 16 chars at pads with 0s otherwise,can leave empty." << std::endl;        
+            return 1;        
+        }
+    #endif
+}
