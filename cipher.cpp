@@ -114,8 +114,7 @@ class B85codec : public Codec
          * @param in 
          * @return std::string 
          */
-        std::string encode(uvector &in){	            
-            int i=0;
+        std::string encode(uvector &in){	                        
             std::string out;
             auto add = [&](uint32_t v){ 
                 uint32_t t = v / N85_4; v -= t * N85_4;
@@ -139,7 +138,7 @@ class B85codec : public Codec
             while (p++,(buf.size() + 1) % 4 != 0) buf.push_back(0); // pad data with 0s
             buf.push_back(p - 1); // where the last padding is the length padded  
             
-            for(int i=0;i<buf.size();i+=4) add(make_int(&buf[i]));
+            for(unsigned int i=0;i<buf.size();i+=4) add(make_int(&buf[i]));
             return fence(out,fence_period);
         }        
         /**
@@ -167,7 +166,7 @@ class B85codec : public Codec
             };
             if(in.length() % 5 != 0 || in.length() < 5)
                 throw std::runtime_error("Bad Base85 string.");
-            for(int i=0;i<in.length();i+=5) add(make_int(&in[i]));            
+            for(unsigned  int i=0;i<in.length();i+=5) add(make_int(&in[i]));            
             uchar p = out.back() + 1; // copy the pad length
             if (p >= out.size())
                 throw std::runtime_error("Incompatible Base85 string.");
@@ -277,8 +276,7 @@ class BlockCipher{
             padchar = padchar_;            
             sbox = SBOX; 
             inv_sbox = new uchar[256];
-            CRC32 = new unsigned long[256]; 
-            unsigned int r=0;            
+            CRC32 = new unsigned long[256];             
             // Use rotated polynominal bits for crc32 calculation
             unsigned long invpoly = 0,t=crc32_poly;
             for (int i=0;i<32;i++){
@@ -307,7 +305,7 @@ class BlockCipher{
         std::string encryptECB(uvector &str, uvector &pass)
         {
             pad(str, padchar);
-            for (int i = 0; i + 16 <= str.size(); i += 16)
+            for (unsigned int i = 0; i + 16 <= str.size(); i += 16)
                 encypher(&str[i], i, pass);
             return codec->encode(str);
         }
@@ -321,7 +319,7 @@ class BlockCipher{
         uvector decryptECB(std::string &str, uvector &pass)
         {
             uvector dec = codec->decode(str);
-            for (int i = 0; i + 16 <= dec.size(); i += 16)
+            for (unsigned int i = 0; i + 16 <= dec.size(); i += 16)
                 decypher(&dec[i], i, pass);
             unpad(dec);
             return dec;
@@ -340,7 +338,7 @@ class BlockCipher{
             pad(str, padchar);
             uchar vec[16];
             std::memcpy(vec, iv, 16);
-            for (int i = 0; i + 16 <= str.size(); i += 16)
+            for (unsigned int i = 0; i + 16 <= str.size(); i += 16)
             {
                 encypher(&str[i], i, pass);
                 XOR(&str[i], &vec[0], 16);
@@ -362,7 +360,7 @@ class BlockCipher{
             uvector dec = codec->decode(str);
             uchar vec[16], prev[16];
             std::memcpy(vec, iv, 16);
-            for (int i = 0; i + 16 <= dec.size(); i += 16)
+            for (unsigned int i = 0; i + 16 <= dec.size(); i += 16)
             {
                 std::memcpy(prev, &dec[i], 16);
                 XOR(&dec[i], &vec[0], 16);
@@ -410,8 +408,7 @@ class BlockCipher{
         }
         unsigned long crc32(uvector &str){
             unsigned long crc = 0xFFFFFFFFul;
-            for(uchar c : str)
-                crc = (crc >> 8) ^ CRC32[(crc ^ c) & 0xFF];		
+            for(uchar c : str) crc = (crc >> 8) ^ CRC32[(crc ^ c) & 0xFF];		
         	return crc;
         }
         void pad(uvector &str, uchar padding){
@@ -426,7 +423,7 @@ class BlockCipher{
             str.push_back(r);
         }
         void unpad(uvector &str){		            
-            int r = (int)str.back() - 1; str.pop_back();            
+            unsigned int r = str.back() - 1; str.pop_back();            
             // Will pop last 4(checksum)+1(length) bytes,checksum is then valiadated	
             if (r > str.size())
                 throw std::runtime_error("Obscure input.");
@@ -442,7 +439,7 @@ class BlockCipher{
 extern "C"
 {	
     /**
-     * @brief APIs exposed to WASM and command line
+     * @brief Base APIs
      */
     #define MODE_BASE64 0b100 // otherwise, Base85    
     #define MODE_CBC    0b010 // otherwise, ECB    
@@ -454,8 +451,7 @@ extern "C"
             else codec = new B85codec(BASE85, mode & MODE_FENCE ? 4 : 0);\
             BlockCipher cipher = BlockCipher(codec,CRC32D,'/');\
             uchar iv_[16]={0}; std::memcpy(iv_,iv,MIN(strlen(iv),16));\
-            uvector password = uvector(pass,pass + strlen(pass));
-
+            uvector password = uvector(pass,pass + strlen(pass));    
 	char *encrypt(char *src,char *pass, char *iv, int mode){		                
         READY;                
         uvector str = uvector(src,src+strlen(src) + 1); std::string text;
@@ -463,7 +459,7 @@ extern "C"
 		if (mode & MODE_CBC)
             text = cipher.encryptCBC(str,password,iv_);	
         else
-            text = cipher.encryptECB(str,password);			       
+            text = cipher.encryptECB(str,password);			               
         return strdup(text.c_str());
 	}
 	char *decrypt(char *src,char *pass, char *iv,int mode){	
@@ -475,9 +471,41 @@ extern "C"
 		if (mode & MODE_CBC)
             text = cipher.decryptCBC(str,password,iv_);	
         else
-            text = cipher.decryptECB(str,password);	        
+            text = cipher.decryptECB(str,password);	                
 		return strdup((char*)&text[0]);
 	}
+#ifdef PYTHON
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+static PyObject *cipher_encrypt(PyObject *self, PyObject *args)
+{
+    char *src,*pass,*iv;
+    int mode;    
+    if (!PyArg_ParseTuple(args, "sssi", &src,&pass,&iv,&mode))
+        return NULL;
+    char *result = encrypt(src,pass,iv,mode);
+    return PyUnicode_FromString(result);
+}
+static PyMethodDef PyMethods[] = {
+    {"encrypt",  cipher_encrypt, METH_VARARGS,
+     "Encryption method."},    
+    {NULL, NULL, 0, NULL}        /* Sentinel */
+};
+static struct PyModuleDef PyModule = {
+    PyModuleDef_HEAD_INIT,
+    "cipher",   /* name of module */
+    NULL, /* module documentation, may be NULL */
+    -1,      /* size of per-interpreter state of the module,
+                 or -1 if the module keeps state in global variables. */
+    PyMethods
+};
+PyMODINIT_FUNC PyInit_cipher(void)
+{
+    return PyModule_Create(&PyModule);
+}
+#endif
+
+#ifdef CLI
 	int main(int argc,char* argv[]){	
         if (argc > 4){
             char * iv; if (argc == 6) iv = argv[5]; else iv = new char[16]();            
@@ -501,4 +529,5 @@ extern "C"
         std::cout << "          IV : truncates at 16 chars at pads with 0s otherwise,can leave empty." << std::endl;        
 		return 1;        
 	}
+#endif
 };
